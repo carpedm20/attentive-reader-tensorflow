@@ -14,6 +14,18 @@ Prerequisites
 Usage
 -----
 
+First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/rc-data) with:
+
+    $ ./download.sh
+
+To train a model with `cnn` dataset:
+
+    $ python main.py --dataset cnn --is_train True
+
+To test an existing model:
+
+    $ python main.py --dataset cnn
+
 (in progress)
 
 
