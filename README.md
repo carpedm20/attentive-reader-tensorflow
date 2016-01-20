@@ -14,9 +14,7 @@ Prerequisites
 Usage
 -----
 
-First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/rc-data) with:
-
-    $ ./download.sh
+First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/rc-data) from [here](https://github.com/deepmind/rc-data) or [here](http://cs.nyu.edu/~kcho/DMQA/).
 
 To train a model with `cnn` dataset:
 
