@@ -75,8 +75,6 @@ def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
         tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
         for w in tokens:
           word = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
-          if word == 'dies@entity0':
-              import ipdb; ipdb.set_trace() 
           if word in vocab:
             vocab[word] += 1
           else:
@@ -173,7 +171,6 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
             tokens_file.write(line)
           elif counter == 4:
             entity, ans = line.split(":",1)
-            import ipdb; ipdb.set_trace() 
             tokens_file.write(vocab[entity] + ans)
           else:
             token_ids = sentence_to_token_ids(line, vocab, tokenizer,
@@ -231,7 +228,10 @@ def get_all_context(dir_name, context_fname):
   context = ""
   for fname in tqdm(glob(os.path.join(dir_name, "*.question"))):
     with open(fname) as f:
-      context += f.read().split("\n\n",2)[1]
+      try:
+        context += f.read().split("\n\n",2)[1]
+      except:
+        print(" [!] Error occured for %s" % fname)
   print(" [*] Writing %s ..." % context_fname)
   with open(context_fname, 'wb') as f:
     f.write(context)
