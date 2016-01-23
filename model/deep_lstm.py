@@ -35,6 +35,8 @@ class DeepLSTM(Model):
     for nsteps in xrange(1, self.num_steps):
       self.inputs_dict[nsteps] = tf.placeholder(tf.int32, [self.batch_size, nsteps])
 
+    self.y = tf.placeholder(tf.int32, [self.batch_size])
+
     with tf.device("/cpu:0"):
       self.emb = tf.get_variable("emb", [vocab_size, size])
       self.embed_inputs_dict = {}
@@ -59,13 +61,15 @@ class DeepLSTM(Model):
                           initial_state=self.initial_state)
       self.outputs_dict[nsteps] = states[-1]
 
-    output = tf.reduce_sum(tf.pack(self.outputs), 0)
-
   def train(self, epoch=25, batch_size=1,
             learning_rate=0.0002, momentum=0.9, decay=0.95,
             data_dir="data", dataset_name="cnn", vocab_size=1000000):
     if not self.vocab:
       self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
+
+    with tf.device("/cpu:0"):
+      self.W = tf.get_variable("W", [vocab_size, self.size * self.depth])
+      W_a = tf.nn.embedding_lookup(W, self._input_data)
 
     self.opt = tf.train.RMSPropOptimizer(learning_rate,
                                          decay=decay,
