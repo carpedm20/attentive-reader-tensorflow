@@ -265,6 +265,17 @@ def prepare_data(data_dir, dataset_name, vocab_size):
   print(" [*] Convert data in %s into vocab indicies..." % (train_path))
   questions_to_token_ids(train_path, vocab_fname, vocab_size)
 
+def load_vocab(data_dir, dataset_name, vocab_size):
+  vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%d" % (dataset_name, vocab_size))
+  return initialize_vocabulary(vocab_fname)
+
+def load_dataset(data_dir, dataset_name, vocab_size):
+  train_files = os.path.join(data_dir, dataset_name, "questions",
+                             "training", "*.question.ids%s" % (vocab_size))
+  for fname in glob(train_files):
+    with open(fname) as f:
+      yield f.read().split("\n\n")
+
 if __name__ == '__main__':
   if len(sys.argv) < 3:
     print(" [*] usage: python data_utils.py DATA_DIR DATASET_NAME VOCAB_SIZE")

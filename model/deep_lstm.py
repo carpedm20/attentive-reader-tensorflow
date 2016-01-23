@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
 from base_model import Model
+from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
@@ -37,9 +38,28 @@ class DeepLSTM(Model):
     self.cell_fw = rnn_cell.BasicLSTMCell(size)
     self.cell_bw = rnn_cell.BasicLSTMCell(size)
 
-  def build_model(self, sequence_length):
-    return rnn.bidirectional_rnn(self.cell_fw,
-                                 self.cell_bw,
-                                 tf.unpack(self.embed_inputs),
-                                 dtype=tf.float32,
-                                 sequence_length=self.input_lengths)
+    self.otuput = rnn.bidirectional_rnn(self.cell_fw,
+                                        self.cell_bw,
+                                        tf.unpack(self.embed_inputs),
+                                        dtype=tf.float32,
+                                        sequence_length=self.input_lengths)
+
+    output = tf.reduce_sum(tf.pack(self.output), 0)
+
+  def train(self, epoch=25, batch_size=1,
+            learning_rate=0.0002, data_dir="data",
+            dataset_name="cnn", vocab_size=1000000):
+    if not self.vocab:
+      self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
+
+    for epoch_idx in xrange(epoch):
+      data_loader = load_dataset(data_dir, dataset_name, vocab_size)
+
+      contexts, questions, answers = [], [], []
+      for batch_idx in xrange(batch_size):
+        _, context, question, answer, _ = data_loader.next()
+        contexts.append(context)
+        questions.append(question)
+        answers.append(answers)
+
+      self.model.
