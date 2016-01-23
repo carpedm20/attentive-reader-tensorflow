@@ -26,6 +26,7 @@ import re
 import tarfile
 from tqdm import *
 from glob import glob
+from collections import defaultdict
 
 from tensorflow.python.platform import gfile
 
@@ -33,6 +34,7 @@ from tensorflow.python.platform import gfile
 _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
 _DIGIT_RE = re.compile(r"\d")
 
+_ENTITY = "@entity"
 _UNK = "_UNK"
 _START_VOCAB = [_UNK]
 UNK_ID = 0
@@ -45,7 +47,7 @@ def basic_tokenizer(sentence):
   return [w for w in words if w]
 
 
-def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
+def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
                       tokenizer=None, normalize_digits=True):
   """Create vocabulary file (if it does not exist yet) from data file.
 
@@ -64,27 +66,22 @@ def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not gfile.Exists(vocabulary_path):
-    print("Creating vocabulary %s from data %s" % (vocabulary_path, data_path))
-    vocab = {}
-    with gfile.GFile(data_path, mode="r") as f:
-      counter = 0
-      for line in f:
-        counter += 1
-        if counter % 100000 == 0:
-          print("  processing line %d" % counter)
-        tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
-        for w in tokens:
-          word = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
-          if word in vocab:
-            vocab[word] += 1
-          else:
-            vocab[word] = 1
-      vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-      if len(vocab_list) > max_vocabulary_size:
-        vocab_list = vocab_list[:max_vocabulary_size]
-      with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
-        for w in vocab_list:
-          vocab_file.write(w + "\n")
+    print("Creating vocabulary %s" % (vocabulary_path))
+    vocab = defaultdict(int)
+    tokens = tokenizer(context) if tokenizer else basic_tokenizer(context)
+    for w in tqdm(tokens):
+      if 'entity' not in w:
+        w = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
+      vocab[w] += 1
+    vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+    if len(vocab_list) > max_vocabulary_size:
+      vocab_list = vocab_list[:max_vocabulary_size]
+    keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
+    for key in set(range(max(keys))) - set(keys):
+      vocab['%s%d' % (_ENTITY, key)] += 1
+    with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
+      for w in vocab_list:
+        vocab_file.write(w + "\n")
 
 
 def initialize_vocabulary(vocabulary_path):
@@ -145,7 +142,7 @@ def sentence_to_token_ids(sentence, vocabulary,
   return [vocabulary.get(re.sub(_DIGIT_RE, "0", w), UNK_ID) for w in words]
 
 
-def data_to_token_ids(data_path, target_path, vocabulary_path,
+def data_to_token_ids(data_path, target_path, vocab,
                       tokenizer=None, normalize_digits=True):
   """Tokenize data file and turn into token-ids using given vocabulary file.
 
@@ -162,7 +159,6 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not gfile.Exists(target_path):
-    vocab, _ = initialize_vocabulary(vocabulary_path)
     with gfile.GFile(data_path, mode="r") as data_file:
       with gfile.GFile(target_path, mode="w") as tokens_file:
         counter = 0
@@ -170,8 +166,8 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
           if counter == 0:
             tokens_file.write(line)
           elif counter == 4:
-            entity, ans = line.split(":",1)
-            tokens_file.write(vocab[entity] + ans)
+            entity, ans = line.split(":", 1)
+            tokens_file.write("%s:%s" % (vocab[entity], ans))
           else:
             token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                               normalize_digits)
@@ -229,17 +225,21 @@ def get_all_context(dir_name, context_fname):
   for fname in tqdm(glob(os.path.join(dir_name, "*.question"))):
     with open(fname) as f:
       try:
-        context += f.read().split("\n\n",2)[1]
+        lines = f.read().split("\n\n")
+        context += lines[1] + " "
+        context += lines[4].replace(":"," ") + " "
       except:
         print(" [!] Error occured for %s" % fname)
   print(" [*] Writing %s ..." % context_fname)
   with open(context_fname, 'wb') as f:
     f.write(context)
+  return context
 
 
 def questions_to_token_ids(data_path, vocab_fname, vocab_size):
+  vocab, _ = initialize_vocabulary(vocab_fname)
   for fname in tqdm(glob(os.path.join(data_path, "*.question"))):
-    data_to_token_ids(fname, fname + ".ids%d" % vocab_size, vocab_fname)
+    data_to_token_ids(fname, fname + ".ids%d" % vocab_size, vocab)
 
 
 def prepare_data(data_dir, dataset, vocab_size):
@@ -250,17 +250,19 @@ def prepare_data(data_dir, dataset, vocab_size):
 
   if not os.path.exists(context_fname):
     print(" [*] Combining all contexts for %s in %s ..." % (dataset, train_path))
-    get_all_context(train_path, context_fname)
+    context = get_all_context(train_path, context_fname)
   else:
-    print(" [*] Skip combining all contextss")
+    context = gfile.GFile(context_fname, mode="r").read()
+    print(" [*] Skip combining all contexts")
 
   if not os.path.exists(vocab_fname):
     print(" [*] Create vocab from %s to %s ..." % (context_fname, vocab_fname))
-    create_vocabulary(vocab_fname, context_fname, vocab_size)
+    create_vocabulary(vocab_fname, context, vocab_size)
   else:
     print(" [*] Skip creating vocab")
 
   print(" [*] Convert data in %s into vocab indicies..." % (train_path))
   questions_to_token_ids(train_path, vocab_fname, vocab_size)
 
-prepare_data('data', 'cnn', 1000000)
+if __name__ == '__main__':
+  prepare_data('data', 'cnn', 1000000)

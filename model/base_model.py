@@ -1,13 +1,19 @@
 import os
 import tensorflow as tf
 
-class Reader(object):
+class Model(object):
   """Abstract object representing an Reader model."""
 
-  def __init__(self):
-    self.saver = tf.train.Saver()
+  def __init__(self, config):
+    pass
+
+  def prepare_vocab(self, data_dir, dataset_name, vocab_size):
+    vocab_fname = os.path.join(data_dir, dataset, '%s.vocab%d' % (dataset_name, vocab_size))
+    self.vocab, self.rev_vocab = initialize_vocabulary(vocab_fname)
 
   def save(self, checkpoint_dir, dataset_name):
+    self.saver = tf.train.Saver()
+
     print(" [*] Saving checkpoints...")
     model_name = type(self).__name__ or "Reader"
     if self.batch_size:
@@ -21,6 +27,8 @@ class Reader(object):
     self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name))
 
   def load(self, checkpoint_dir, dataset_name):
+    self.saver = tf.train.Saver()
+
     print(" [*] Loading checkpoints...")
     if self.batch_size:
       model_dir = "%s_%s" % (dataset_name, self.batch_size)

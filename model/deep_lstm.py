@@ -1,13 +1,14 @@
 import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
-from base_model import Reader
+from base_model import Model
 
-class DeepLSTM(Reader):
+class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256,
                learning_rate=1e-4, batch_size=32,
-               dropout=0.1, max_time_unit=100):
+               dropout=0.1, max_time_unit=100,
+               checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
     Args:
@@ -18,7 +19,7 @@ class DeepLSTM(Reader):
       dropout: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
       max_time_unit: int, The max time unit [100]
     """
-    super(DeepLSTM, self).__init__()
+    super(DeepLSTM, self).__init__(FLAGS)
 
     self.vocab_size = vocab_size
     self.size = size
