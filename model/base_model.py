@@ -20,7 +20,6 @@ class Model(object):
     for fname in glob(self.train_files):
       with open(fname) as f:
         url, context, question, answer, candidates = f.read().split("\n\n")
-        print url
 
   def train(self, epoch=25, batch_size=64,
             learning_rate=0.0002, data_dir="data",
@@ -28,6 +27,8 @@ class Model(object):
     if not self.vocab:
       self.load_vocab(data_dir, dataset_name, vocab_size)
       self.load_dataset(data_dir, dataset_name, vocab_size)
+
+    x = self.build_model(10)
 
   def save(self, checkpoint_dir, dataset_name):
     self.saver = tf.train.Saver()

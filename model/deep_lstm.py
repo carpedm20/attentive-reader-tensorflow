@@ -21,23 +21,32 @@ class DeepLSTM(Model):
     """
     super(DeepLSTM, self).__init__()
 
-    self.vocab_size = vocab_size
-    self.size = size
-    self.learning_rate = learning_rate
-    self.batch_size = batch_size
-    self.dropout = dropout
-    self.max_time_unit = max_time_unit
+    self.vocab_size = int(vocab_size)
+    self.size = int(size)
+    self.learning_rate = float(learning_rate)
+    self.batch_size = int(batch_size)
+    self.dropout = float(dropout)
+    self.max_time_unit = int(max_time_unit)
 
     self.inputs = []
-    for idx in xrange(max_time_unit):
-      self.inputs.append(tf.placeholder(tf.float32, [batch_size, vocab_size]))
 
-    self.cell_fw = rnn_cell.BasicLSTMCell(size)
-    self.cell_bw = rnn_cell.BasicLSTMCell(size)
+    self.emb = tf.Variable(tf.truncated_normal([self.vocab_size, self.size], -0.1, 0.1), name='emb')
+
+    for idx in xrange(max_time_unit):
+      #self.inputs.append(tf.placeholder(tf.float32, [self.batch_size, vocab_size]))
+      self.inputs.append(tf.nn.embedding_lookup(self.emb,
+                                                tf.placeholder(tf.int32, 1)))
+
+    self.cell_fw = rnn_cell.BasicLSTMCell([1, size])
+    self.cell_bw = rnn_cell.BasicLSTMCell([1, size])
+    self.state_fw = tf.zeros([1, size])
+    self.state_bw = tf.zeros([1, size])
 
   def build_model(self, sequence_length):
     return rnn.bidirectional_rnn(self.cell_fw,
                                  self.cell_bw,
                                  self.inputs,
-                                 dtype=tf.float32,
-                                 sequence_length=sequence_length)
+                                 #dtype=tf.float32,
+                                 sequence_length=sequence_length,
+                                 initial_state_fw=self.state_fw,
+                                 initial_state_bw=self.state_bw)

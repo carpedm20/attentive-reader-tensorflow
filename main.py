@@ -34,11 +34,11 @@ def main(_):
 
   with tf.Session() as sess:
     model = model_dict[FLAGS.model](FLAGS.vocab_size,
-        FLAGS.checkpoint_dir, forward_only=FLAGS.forward_only)
+        checkpoint_dir=FLAGS.checkpoint_dir, forward_only=FLAGS.forward_only)
 
     if FLAGS.forward_only:
       model.train(FLAGS.epoch, FLAGS.batch_size, FLAGS.learning_rate,
-          FLAGS.data_dir, FLAGS.dataset, FLAGS.vocab_size)
+                  FLAGS.data_dir, FLAGS.dataset, FLAGS.vocab_size)
     else:
       model.load(FLAGS.checkpoint_dir)
 
