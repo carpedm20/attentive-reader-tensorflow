@@ -1,11 +1,10 @@
 import os
 import tensorflow as tf
 
+from data_utils import initialize_vocabulary
+
 class Model(object):
   """Abstract object representing an Reader model."""
-
-  def __init__(self, config):
-    pass
 
   def prepare_vocab(self, data_dir, dataset_name, vocab_size):
     vocab_fname = os.path.join(data_dir, dataset, '%s.vocab%d' % (dataset_name, vocab_size))
