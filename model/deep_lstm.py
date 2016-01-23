@@ -2,11 +2,12 @@ import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
 from base_model import Model
+from cells import LSTMCell, MultiRNNCellWithSkipConn
 from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
-  def __init__(self, vocab_size, size=256, depth=2,
+  def __init__(self, vocab_size, size=256, depth=3,
                learning_rate=1e-4, batch_size=32,
                keep_prob=0.1, num_steps=100,
                checkpoint_dir="checkpoint", forward_only=False):
@@ -30,16 +31,19 @@ class DeepLSTM(Model):
     self.keep_prob = float(keep_prob)
     self.num_steps = int(num_steps)
 
-    self.inputs = tf.placeholder(tf.int32, [self.batch_size, self.num_steps])
-    self.input_lengths = tf.placeholder(tf.int64, [self.batch_size])
+    self.inputs_dict = {}
+    for nsteps in xrange(1, self.num_steps):
+      self.inputs_dict[nsteps] = tf.placeholder(tf.int32, [self.batch_size, nsteps])
 
     with tf.device("/cpu:0"):
-      self.emb = tf.Variable(tf.truncated_normal(
-          [self.vocab_size, self.size], -0.1, 0.1), name='emb')
-      self.embed_inputs = tf.nn.embedding_lookup(self.emb, self.inputs)
+      self.emb = tf.get_variable("emb", [vocab_size, size])
+      self.embed_inputs_dict = {}
+      for nsteps in xrange(1, self.num_steps):
+        self.embed_inputs_dict[nsteps] = tf.nn.embedding_lookup(self.emb,
+                                                                self.inputs_dict[nsteps])
 
-    self.cell = rnn_cell.BasicLSTMCell(size, forget_bias=0.0)
-    self.stacked_cell = rnn_cell.MultiRNNCell([self.cell] * depth)
+    self.cell = LSTMCell(size, forget_bias=0.0)
+    self.stacked_cell = MultiRNNCellWithSkipConn([self.cell] * depth)
 
     self.initial_state = self.stacked_cell.zero_state(batch_size, tf.float32)
 
@@ -47,13 +51,15 @@ class DeepLSTM(Model):
       lstm_cell = rnn_cell.DropoutWrapper(
           lstm_cell, output_keep_prob=keep_prob)
 
-    self.outputs, self.states = rnn.rnn(self.stacked_cell,
-                                        tf.unpack(self.embed_inputs),
-                                        dtype=tf.float32,
-                                        sequence_length=self.input_lengths,
-                                        initial_state=self.initial_state)
+    self.outputs_dict = {}
+    for nsteps in xrange(1, self.num_steps):
+      _, states = rnn.rnn(self.stacked_cell,
+                          tf.unpack(self.embed_inputs_dict[nsteps]),
+                          dtype=tf.float32,
+                          initial_state=self.initial_state)
+      self.outputs_dict[nsteps] = states[-1]
 
-    output = tf.reduce_sum(tf.pack(self.output), 0)
+    output = tf.reduce_sum(tf.pack(self.outputs), 0)
 
   def train(self, epoch=25, batch_size=1,
             learning_rate=0.0002, momentum=0.9, decay=0.95,
