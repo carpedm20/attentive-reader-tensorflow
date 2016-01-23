@@ -1,14 +1,33 @@
 import os
+from glob import glob
 import tensorflow as tf
 
 from data_utils import initialize_vocabulary
 
 class Model(object):
   """Abstract object representing an Reader model."""
+  def __init__(self):
+    self.vocab = None
+    self.data = None
 
-  def prepare_vocab(self, data_dir, dataset_name, vocab_size):
-    vocab_fname = os.path.join(data_dir, dataset, '%s.vocab%d' % (dataset_name, vocab_size))
+  def load_vocab(self, data_dir, dataset_name, vocab_size):
+    vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%d" % (dataset_name, vocab_size))
     self.vocab, self.rev_vocab = initialize_vocabulary(vocab_fname)
+
+  def load_dataset(self, data_dir, dataset_name, vocab_size):
+    self.train_files = os.path.join(data_dir, dataset_name, "questions",
+                                    "training", "*.question.ids%s" % (vocab_size))
+    for fname in glob(self.train_files):
+      with open(fname) as f:
+        url, context, question, answer, candidates = f.read().split("\n\n")
+        print url
+
+  def train(self, epoch=25, batch_size=64,
+            learning_rate=0.0002, data_dir="data",
+            dataset_name="cnn", vocab_size=1000000):
+    if not self.vocab:
+      self.load_vocab(data_dir, dataset_name, vocab_size)
+      self.load_dataset(data_dir, dataset_name, vocab_size)
 
   def save(self, checkpoint_dir, dataset_name):
     self.saver = tf.train.Saver()

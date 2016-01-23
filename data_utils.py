@@ -243,14 +243,14 @@ def questions_to_token_ids(data_path, vocab_fname, vocab_size):
     data_to_token_ids(fname, fname + ".ids%d" % vocab_size, vocab)
 
 
-def prepare_data(data_dir, dataset, vocab_size):
-  train_path = os.path.join(data_dir, dataset, 'questions', 'training')
+def prepare_data(data_dir, dataset_name, vocab_size):
+  train_path = os.path.join(data_dir, dataset_name, 'questions', 'training')
 
-  context_fname = os.path.join(data_dir, dataset, '%s.context' % dataset)
-  vocab_fname = os.path.join(data_dir, dataset, '%s.vocab%d' % (dataset, vocab_size))
+  context_fname = os.path.join(data_dir, dataset_name, '%s.context' % dataset_name)
+  vocab_fname = os.path.join(data_dir, dataset_name, '%s.vocab%d' % (dataset_name, vocab_size))
 
   if not os.path.exists(context_fname):
-    print(" [*] Combining all contexts for %s in %s ..." % (dataset, train_path))
+    print(" [*] Combining all contexts for %s in %s ..." % (dataset_name, train_path))
     context = get_all_context(train_path, context_fname)
   else:
     context = gfile.GFile(context_fname, mode="r").read()

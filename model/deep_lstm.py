@@ -19,6 +19,8 @@ class DeepLSTM(Model):
       dropout: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
       max_time_unit: int, The max time unit [100]
     """
+    super(DeepLSTM, self).__init__()
+
     self.vocab_size = vocab_size
     self.size = size
     self.learning_rate = learning_rate
