@@ -14,7 +14,7 @@ flags.DEFINE_integer("vocab_size", 1000000, "The size of vocabulary [1000000]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_string("model", "LSTM", "The type of model to train and test [LSTM, Attentive, Impatient]")
 flags.DEFINE_string("data_dir", "data", "The name of data directory [data]")
-flags.DEFINE_string("dataset", "cnn", "The name of dataset [cnn, dailymail]")
+flags.DEFINE_string("dataset", "small", "The name of dataset [cnn, dailymail]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_boolean("forward_only", False, "True for forward only, False for training [False]")
 FLAGS = flags.FLAGS

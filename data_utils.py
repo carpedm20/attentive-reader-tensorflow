@@ -20,9 +20,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import gzip
 import os
 import re
+import sys
+import gzip
 import tarfile
 from tqdm import *
 from glob import glob
@@ -265,4 +266,14 @@ def prepare_data(data_dir, dataset, vocab_size):
   questions_to_token_ids(train_path, vocab_fname, vocab_size)
 
 if __name__ == '__main__':
-  prepare_data('data', 'cnn', 1000000)
+  if len(sys.argv) < 3:
+    print(" [*] usage: python data_utils.py DATA_DIR DATASET_NAME VOCAB_SIZE")
+  else:
+    data_dir = sys.argv[1]
+    dataset_name = sys.argv[2]
+    if len(sys.argv) > 3:
+      vocab_size = sys.argv[3]
+    else:
+      vocab_size = 100000
+
+    prepare_data(data_dir, dataset_name, vocab_size)

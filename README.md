@@ -14,7 +14,12 @@ Prerequisites
 Usage
 -----
 
-First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/rc-data) from [here](https://github.com/deepmind/rc-data) or [here](http://cs.nyu.edu/~kcho/DMQA/).
+First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/rc-data) from [here](http://cs.nyu.edu/~kcho/DMQA/), save `cnn.tgz` and `dailymail.tgz` into the repo, and run:
+
+    $ ./unzip.sh cnn.tgz dailymail.tgz
+
+Then run the pre-processing code with:
+    $ python data_utils.py data cnn
 
 To train a model with `cnn` dataset:
 
