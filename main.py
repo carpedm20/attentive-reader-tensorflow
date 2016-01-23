@@ -11,7 +11,9 @@ flags = tf.app.flags
 flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 flags.DEFINE_integer("vocab_size", 100000, "The size of vocabulary [100000]")
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
+flags.DEFINE_float("learning_rate", 5e-5, "Learning rate [0.00005]")
+flags.DEFINE_float("momentum", 0.9, "Momentum of RMSProp [0.9]")
+flags.DEFINE_float("decay", 0.95, "Decay of RMSProp [0.95]")
 flags.DEFINE_string("model", "LSTM", "The type of model to train and test [LSTM, Attentive, Impatient]")
 flags.DEFINE_string("data_dir", "data", "The name of data directory [data]")
 flags.DEFINE_string("dataset", "small", "The name of dataset [cnn, dailymail]")
@@ -38,7 +40,8 @@ def main(_):
 
     if FLAGS.forward_only:
       model.train(FLAGS.epoch, FLAGS.batch_size, FLAGS.learning_rate,
-                  FLAGS.data_dir, FLAGS.dataset, FLAGS.vocab_size)
+                  FLAGS.momentum, FLAGS.decay, FLAGS.data_dir,
+                  FLAGS.dataset, FLAGS.vocab_size)
     else:
       model.load(FLAGS.checkpoint_dir)
 

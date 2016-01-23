@@ -79,7 +79,7 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
       vocab_list = vocab_list[:max_vocabulary_size]
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
     for key in set(range(max(keys))) - set(keys):
-      vocab['%s%d' % (_ENTITY, key)] += 1
+      vocab['%s%s' % (_ENTITY, key)] += 1
     with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
       for w in vocab_list:
         vocab_file.write(w + "\n")
@@ -177,50 +177,6 @@ def data_to_token_ids(data_path, target_path, vocab,
             counter += 1
 
 
-def prepare_wmt_data(data_dir, en_vocabulary_size, fr_vocabulary_size):
-  """Get WMT data into data_dir, create vocabularies and tokenize data.
-
-  Args:
-    data_dir: directory in which the data sets will be stored.
-    en_vocabulary_size: size of the English vocabulary to create and use.
-    fr_vocabulary_size: size of the French vocabulary to create and use.
-
-  Returns:
-    A tuple of 6 elements:
-      (1) path to the token-ids for English training data-set,
-      (2) path to the token-ids for French training data-set,
-      (3) path to the token-ids for English development data-set,
-      (4) path to the token-ids for French development data-set,
-      (5) path to the English vocabulary file,
-      (6) path to the French vocabluary file.
-  """
-  # Get wmt data to the specified directory.
-  train_path = get_wmt_enfr_train_set(data_dir)
-  dev_path = get_wmt_enfr_dev_set(data_dir)
-
-  # Create vocabularies of the appropriate sizes.
-  fr_vocab_fname = os.path.join(data_dir, "vocab%d.fr" % fr_vocabulary_size)
-  en_vocab_fname = os.path.join(data_dir, "vocab%d.en" % en_vocabulary_size)
-  create_vocabulary(fr_vocab_fname, train_path + ".fr", fr_vocabulary_size)
-  create_vocabulary(en_vocab_fname, train_path + ".en", en_vocabulary_size)
-
-  # Create token ids for the training data.
-  fr_train_ids_path = train_path + (".ids%d.fr" % fr_vocabulary_size)
-  en_train_ids_path = train_path + (".ids%d.en" % en_vocabulary_size)
-  data_to_token_ids(train_path + ".fr", fr_train_ids_path, fr_vocab_fname)
-  data_to_token_ids(train_path + ".en", en_train_ids_path, en_vocab_fname)
-
-  # Create token ids for the development data.
-  fr_dev_ids_path = dev_path + (".ids%d.fr" % fr_vocabulary_size)
-  en_dev_ids_path = dev_path + (".ids%d.en" % en_vocabulary_size)
-  data_to_token_ids(dev_path + ".fr", fr_dev_ids_path, fr_vocab_fname)
-  data_to_token_ids(dev_path + ".en", en_dev_ids_path, en_vocab_fname)
-
-  return (en_train_ids_path, fr_train_ids_path,
-          en_dev_ids_path, fr_dev_ids_path,
-          en_vocab_fname, fr_vocab_fname)
-
-
 def get_all_context(dir_name, context_fname):
   context = ""
   for fname in tqdm(glob(os.path.join(dir_name, "*.question"))):
@@ -240,14 +196,14 @@ def get_all_context(dir_name, context_fname):
 def questions_to_token_ids(data_path, vocab_fname, vocab_size):
   vocab, _ = initialize_vocabulary(vocab_fname)
   for fname in tqdm(glob(os.path.join(data_path, "*.question"))):
-    data_to_token_ids(fname, fname + ".ids%d" % vocab_size, vocab)
+    data_to_token_ids(fname, fname + ".ids%s" % vocab_size, vocab)
 
 
 def prepare_data(data_dir, dataset_name, vocab_size):
   train_path = os.path.join(data_dir, dataset_name, 'questions', 'training')
 
   context_fname = os.path.join(data_dir, dataset_name, '%s.context' % dataset_name)
-  vocab_fname = os.path.join(data_dir, dataset_name, '%s.vocab%d' % (dataset_name, vocab_size))
+  vocab_fname = os.path.join(data_dir, dataset_name, '%s.vocab%s' % (dataset_name, vocab_size))
 
   if not os.path.exists(context_fname):
     print(" [*] Combining all contexts for %s in %s ..." % (dataset_name, train_path))
@@ -266,7 +222,7 @@ def prepare_data(data_dir, dataset_name, vocab_size):
   questions_to_token_ids(train_path, vocab_fname, vocab_size)
 
 def load_vocab(data_dir, dataset_name, vocab_size):
-  vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%d" % (dataset_name, vocab_size))
+  vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%s" % (dataset_name, vocab_size))
   return initialize_vocabulary(vocab_fname)
 
 def load_dataset(data_dir, dataset_name, vocab_size):

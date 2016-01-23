@@ -6,7 +6,7 @@ from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
-  def __init__(self, vocab_size, size=256, depth=2,
+  def __init__(self, vocab_size, size=256,
                learning_rate=1e-4, batch_size=32,
                dropout=0.1, seq_length=100,
                checkpoint_dir="checkpoint", forward_only=False):
@@ -24,7 +24,6 @@ class DeepLSTM(Model):
 
     self.vocab_size = int(vocab_size)
     self.size = int(size)
-    self.depth = int(depth)
     self.learning_rate = float(learning_rate)
     self.batch_size = int(batch_size)
     self.dropout = float(dropout)
@@ -36,17 +35,14 @@ class DeepLSTM(Model):
     self.emb = tf.Variable(tf.truncated_normal([self.vocab_size, self.size], -0.1, 0.1), name='emb')
     self.embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
 
-    self.cell = rnn_cell.BasicLSTMCell(size, forget_bias=0.0)
-    self.stacked_cell = rnn_cell.MultiRNNCell([self.cell] * depth)
+    self.cell_fw = rnn_cell.BasicLSTMCell(size)
+    self.cell_bw = rnn_cell.BasicLSTMCell(size)
 
-    if is_training and config.keep_prob < 1:
-      lstm_cell = rnn_cell.DropoutWrapper(
-          lstm_cell, output_keep_prob=config.keep_prob)
-
-    self.output = rnn.rnn(self.stacked_cell,
-                          tf.unpack(self.embed_inputs),
-                          dtype=tf.float32,
-                          sequence_length=self.input_lengths)
+    self.output = rnn.bidirectional_rnn(self.cell_fw,
+                                        self.cell_bw,
+                                        tf.unpack(self.embed_inputs),
+                                        dtype=tf.float32,
+                                        sequence_length=self.input_lengths)
 
     output = tf.reduce_sum(tf.pack(self.output), 0)
 
