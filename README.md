@@ -1,7 +1,18 @@
 Attentive Reader
 ================
 
-Tensorflow implementation of Google DeepMind's [Teaching Machines to Read and Comprehend](http://arxiv.org/pdf/1506.03340v3.pdf).
+Tensorflow implementation of Google DeepMind's [Teaching Machines to Read and Comprehend](http://arxiv.org/pdf/1506.03340v3.pdf). This code contains:
+
+![models](./assets/models.png)
+
+1. A two layer Deep LSTM Reader
+    - with [skip connections](http://arxiv.org/pdf/1308.0850.pdf) from the inputs to all hidden layers
+    - with [peephole weights](http://www.jmlr.org/papers/volume3/gers02a/gers02a.pdf) that provide precise timing
+2. Attentive Reader
+    - with [Bidirectional LSTMs](ftp://ftp.idsia.ch/pub/juergen/nn_2005.pdf) with peephole weights
+3. Impatient Reader
+    - with [Bidirectional LSTMs](ftp://ftp.idsia.ch/pub/juergen/nn_2005.pdf) with peephole weights
+    - with recurrent accumulation of information from the document while reading the query
 
 
 Prerequisites
