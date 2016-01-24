@@ -78,6 +78,9 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
         w = re.sub(_DIGIT_RE, " %s" % UNK_ID, w) if normalize_digits else w
       vocab[w] += 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+    print("="*20)
+    print(" [*] Max vocab # : %s" % (len(vocab_list)))
+    print("="*20)
     if len(vocab_list) > max_vocabulary_size:
       vocab_list = vocab_list[:max_vocabulary_size]
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
@@ -235,11 +238,12 @@ def load_vocab(data_dir, dataset_name, vocab_size):
 
 
 def load_dataset(data_dir, dataset_name, vocab_size):
-  train_files = os.path.join(data_dir, dataset_name, "questions",
-                             "training", "*.question.ids%s_*" % (vocab_size))
-  for fname in glob(train_files):
+  train_files = glob(os.path.join(data_dir, dataset_name, "questions",
+                                  "training", "*.question.ids%s_*" % (vocab_size)))
+  max_idx = len(train_files)
+  for idx, fname in enumerate(train_files):
     with open(fname) as f:
-      yield f.read().split("\n\n")
+      yield f.read().split("\n\n"), idx, max_idx
 
 
 if __name__ == '__main__':
