@@ -161,21 +161,23 @@ def data_to_token_ids(data_path, target_path, vocab,
   """
   if not gfile.Exists(target_path):
     with gfile.GFile(data_path, mode="r") as data_file:
-      with gfile.GFile(target_path, mode="w") as tokens_file:
-        counter = 0
-        for line in data_file:
-          if counter == 0:
-            tokens_file.write(line)
-          elif counter == 4:
-            entity, ans = line.split(":", 1)
-            tokens_file.write("%s:%s" % (vocab[entity], ans))
-          else:
-            token_ids = sentence_to_token_ids(line, vocab, tokenizer,
-                                              normalize_digits)
-            tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
-          if line == "\n":
-            counter += 1
+      counter = 0
+      results = []
+      for line in data_file:
+        if counter == 0:
+          results.append(line)
+        elif counter == 4:
+          entity, ans = line.split(":", 1)
+          results.append("%s:%s" % (vocab[entity], ans))
+        else:
+          token_ids = sentence_to_token_ids(line, vocab, tokenizer,
+                                            normalize_digits)
+          results.append(" ".join([str(tok) for tok in token_ids]) + "\n")
+        if line == "\n":
+          counter += 1
 
+      with gfile.GFile(target_path, mode="w") as tokens_file:
+        tokens_file.write_lines(results)
 
 def get_all_context(dir_name, context_fname):
   context = ""
@@ -221,9 +223,11 @@ def prepare_data(data_dir, dataset_name, vocab_size):
   print(" [*] Convert data in %s into vocab indicies..." % (train_path))
   questions_to_token_ids(train_path, vocab_fname, vocab_size)
 
+
 def load_vocab(data_dir, dataset_name, vocab_size):
   vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%s" % (dataset_name, vocab_size))
   return initialize_vocabulary(vocab_fname)
+
 
 def load_dataset(data_dir, dataset_name, vocab_size):
   train_files = os.path.join(data_dir, dataset_name, "questions",
@@ -231,6 +235,7 @@ def load_dataset(data_dir, dataset_name, vocab_size):
   for fname in glob(train_files):
     with open(fname) as f:
       yield f.read().split("\n\n")
+
 
 if __name__ == '__main__':
   if len(sys.argv) < 3:

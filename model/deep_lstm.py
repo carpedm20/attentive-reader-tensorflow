@@ -30,6 +30,7 @@ class DeepLSTM(Model):
     self.batch_size = int(batch_size)
     self.keep_prob = float(keep_prob)
     self.max_nsteps = int(max_nsteps)
+    self.checkpoint_dir = checkpoint_dir
 
     self.cell = LSTMCell(size, forget_bias=0.0)
     if not forward_only and self.keep_prob < 1:
@@ -70,14 +71,23 @@ class DeepLSTM(Model):
     self.loss = tf.nn.softmax_cross_entropy_with_logits(
         tf.matmul(self.actual_output, self.W, transpose_b=True), self.target)
 
-  def train(self, epoch=25, batch_size=32,
+  def train(self, sess, epoch=25, batch_size=32,
             learning_rate=0.0002, momentum=0.9, decay=0.95,
             data_dir="data", dataset_name="cnn", vocab_size=1000000):
     self.prepare_model(data_dir, dataset_name, vocab_size)
 
-    self.optim = tf.train.RMSPropOptimizer(learning_rate,
-                                           decay=decay,
-                                           momentum=momentum).minimize(self.loss)
+    self.optim = tf.train.AdamOptimizer(learning_rate, 0.9).minimize(self.loss)
+    # Could not use RMSPropOptimizer because the sparse update of RMSPropOptimizer
+    # is not implemented yet (2016.01.24).
+    # self.optim = tf.train.RMSPropOptimizer(learning_rate,
+    #                                        decay=decay,
+    #                                        momentum=momentum).minimize(self.loss)
+
+    sess.run(tf.initialize_all_variables())
+    if self.load(self.checkpoint_dir, dataset_name):
+      print(" [*] Pretrained model is loaded.")
+    else:
+      print(" [*] There is no checkpoint for this model.")
 
     for epoch_idx in xrange(epoch):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
@@ -89,7 +99,8 @@ class DeepLSTM(Model):
         questions.append(question)
         answers.append(answers)
 
-        get_input_output_loss(self, nstep, vocab_size)
+      cost = self.run([loss], feed_dict={})
+      import ipdb; ipdb.set_trace() 
 
       #self.model.
 
