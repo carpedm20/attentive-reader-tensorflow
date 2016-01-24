@@ -78,8 +78,8 @@ class DeepLSTM(Model):
 
     print(" [*] Preparing model finished.")
 
-  def train(self, sess, epoch=25, learning_rate=0.0002, momentum=0.9,
-            decay=0.95, data_dir="data", dataset_name="cnn", vocab_size=100000):
+  def train(self, sess, vocab_size, epoch=25, learning_rate=0.0002,
+            momentum=0.9, decay=0.95, data_dir="data", dataset_name="cnn"):
     self.prepare_model(data_dir, dataset_name, vocab_size)
 
     start = time.clock()
@@ -142,6 +142,7 @@ class DeepLSTM(Model):
           print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f" \
               % (epoch_idx, data_idx, data_max_idx, time.time() - start_time, np.mean(cost)))
         counter += 1
+      self.save(self.checkpoint_dir, dataset_name)
 
   def test(self, voab_size):
     self.prepare_model(data_dir, dataset_name, vocab_size)

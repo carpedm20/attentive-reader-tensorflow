@@ -75,12 +75,9 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
     tokens = tokenizer(context) if tokenizer else basic_tokenizer(context)
     for w in tqdm(tokens):
       if 'entity' not in w:
-        w = re.sub(_DIGIT_RE, " %s" % UNK_ID, w) if normalize_digits else w
+        w = re.sub(_DIGIT_RE, " ", w) if normalize_digits else w
       vocab[w] += 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-    print("="*20)
-    print(" [*] Max vocab # : %s" % (len(vocab_list)))
-    print("="*20)
     if len(vocab_list) > max_vocabulary_size:
       vocab_list = vocab_list[:max_vocabulary_size]
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
@@ -146,7 +143,8 @@ def sentence_to_token_ids(sentence, vocabulary,
   if not normalize_digits:
     return [vocabulary.get(w, UNK_ID) for w in words]
   # Normalize digits by 0 before looking words up in the vocabulary.
-  return [vocabulary.get(re.sub(_DIGIT_RE, " %s" % UNK_ID, w), UNK_ID) for w in words]
+  return [vocabulary.get(re.sub(_DIGIT_RE, " ", w), UNK_ID) for w in words]
+
 
 
 def data_to_token_ids(data_path, target_path, vocab,
@@ -255,6 +253,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
       vocab_size = sys.argv[3]
     else:
-      vocab_size = 100000
+      vocab_size = 300000
 
     prepare_data(data_dir, dataset_name, vocab_size)
