@@ -63,7 +63,7 @@ class DeepLSTM(Model):
       self.nsteps = tf.placeholder(tf.int32, [self.batch_size, 3])
       outputs = tf.pack([tf.slice(self.batch_states, nstep, [1, 1, self.size * self.depth])
           for idx, nstep in enumerate(tf.unpack(self.nsteps))])
-      self.outputs = tf.reshape(self.outputs, [self.batch_size, self.size * self.depth])
+      self.outputs = tf.reshape(outputs, [self.batch_size, self.size * self.depth])
       # self.batch_states = tf.transpose(tf.pack(states), [1, 0, 2])
       # self.outputs = tf.pack([tf.gather(batch_state, nstep) \
       #     for nstep, batch_state in zip(tf.unpack(self.nsteps), tf.unpack(self.batch_states))])
