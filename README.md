@@ -30,6 +30,7 @@ First, you need to download [DeepMind Q&A Dataset](https://github.com/deepmind/r
     $ ./unzip.sh cnn.tgz dailymail.tgz
 
 Then run the pre-processing code with:
+
     $ python data_utils.py data cnn
 
 To train a model with `cnn` dataset:

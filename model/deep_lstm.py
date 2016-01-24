@@ -2,14 +2,14 @@ import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
 from base_model import Model
-from cells import LSTMCell, MultiRNNCellWithSkipConn
+from cells import LSTMCell, MultiRNNCellWithSkipConn, DropoutWrapper
 from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3,
                learning_rate=1e-4, batch_size=32,
-               keep_prob=0.1, num_steps=100,
+               keep_prob=0.1, max_nsteps=100,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
@@ -19,7 +19,7 @@ class DeepLSTM(Model):
       learning_rate: float, [1e-3, 5e-4, 1e-4, 5e-5]
       batch_size: int, The size of a batch [16, 32]
       keep_prob: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
-      num_steps: int, The max time unit [100]
+      max_nsteps: int, The max time unit [100]
     """
     super(DeepLSTM, self).__init__()
 
@@ -29,66 +29,55 @@ class DeepLSTM(Model):
     self.learning_rate = float(learning_rate)
     self.batch_size = int(batch_size)
     self.keep_prob = float(keep_prob)
-    self.num_steps = int(num_steps)
-
-    self.y = tf.placeholder(tf.int32, [self.batch_size])
+    self.max_nsteps = int(max_nsteps)
 
     self.cell = LSTMCell(size, forget_bias=0.0)
     if not forward_only and self.keep_prob < 1:
-      self.cell = rnn_cell.DropoutWrapper(self.cell, output_keep_prob=keep_prob)
+      self.cell = DropoutWrapper(self.cell, output_keep_prob=keep_prob)
     self.stacked_cell = MultiRNNCellWithSkipConn([self.cell] * depth)
 
     self.initial_state = self.stacked_cell.zero_state(batch_size, tf.float32)
 
-    self.inputs_dict = {}
-    self.outputs_dict = {}
-    self.loss = {}
-
     with tf.device("/cpu:0"):
       self.emb = tf.get_variable("emb", [vocab_size, size])
 
-  def get_input_output_loss(self, nstep, vocab_size):
-    if not self.inputs_dict.has_key(nstep):
-      # inputs
-      self.inputs_dict[nstep] = tf.placeholder(tf.int32, [self.batch_size, nstep])
+    # inputs
+    self.inputs = tf.placeholder(tf.int32, [batch_size, max_nsteps])
+    with tf.device("/cpu:0"):
+      embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
+    self.nsteps = tf.placeholder(tf.int32, [3]) # should be [0, nstep, 0]
+    self.actual_batch_size = tf.placeholder(tf.int32, [3]) # should be [actual_batch_size, 1, size]
 
-      # embeded inputs
-      with tf.device("/cpu:0"):
-        embed_inputs = tf.nn.embedding_lookup(self.emb, self.inputs_dict[nstep])
+    # output states
+    _, states = rnn.rnn(self.stacked_cell,
+                        tf.unpack(embed_inputs),
+                        dtype=tf.float32,
+                        initial_state=self.initial_state)
 
-      # output states
-      _, states = rnn.rnn(self.stacked_cell,
-                          tf.unpack(embed_inputs),
-                          dtype=tf.float32,
-                          initial_state=self.initial_state)
-      self.outputs_dict[nstep] = states[-1]
+    self.batch_states = tf.transpose(tf.pack(states), [1, 0, 2])
+    self.output = tf.gather(self.batch_states, self.nsteps)
 
-      import ipdb; ipdb.set_trace() 
-      self.loss[nstep] = tf.nn.softmax_cross_entropy_with_logits(self.y,
-          tf.argmax(self.W * self.outputs_dict[nstep], 1))
+    actual_output = tf.slice(self.output, self.nsteps, self.actual_batch_size)
+    self.actual_output = tf.reshape(actual_output, [-1, self.size * self.depth])
 
-      grads = []
-      for grad in tf.gradients(loss, self.params):
-          if grad:
-              grads.append(tf.clip_by_value(grad,
-                                            self.min_grad,
-                                            self.max_grad))
-          else:
-              grads.append(grad)
-
-      self.opt = tf.train.RMSPropOptimizer(learning_rate,
-                                           decay=decay,
-                                           momentum=momentum)
-
-    return self.inputs_dict[nstep], self.outputs_dict[nstep]
-
-  def train(self, epoch=25, batch_size=1,
-            learning_rate=0.0002, momentum=0.9, decay=0.95,
-            data_dir="data", dataset_name="cnn", vocab_size=1000000):
+  def prepare_model(self, data_dir, dataset_name, vocab_size):
     if not self.vocab:
       self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
 
     self.W = tf.get_variable("W", [vocab_size, self.size * self.depth])
+
+    self.target = tf.placeholder(tf.float32, [None, vocab_size])
+    self.loss = tf.nn.softmax_cross_entropy_with_logits(
+        tf.matmul(self.actual_output, self.W, transpose_b=True), self.target)
+
+  def train(self, epoch=25, batch_size=32,
+            learning_rate=0.0002, momentum=0.9, decay=0.95,
+            data_dir="data", dataset_name="cnn", vocab_size=1000000):
+    self.prepare_model(data_dir, dataset_name, vocab_size)
+
+    self.optim = tf.train.RMSPropOptimizer(learning_rate,
+                                           decay=decay,
+                                           momentum=momentum).minimize(self.loss)
 
     for epoch_idx in xrange(epoch):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
@@ -100,10 +89,9 @@ class DeepLSTM(Model):
         questions.append(question)
         answers.append(answers)
 
+        get_input_output_loss(self, nstep, vocab_size)
+
       #self.model.
 
   def test(self, voab_size):
-    if not self.vocab:
-      self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
-
-    self.W = tf.get_variable("W", [vocab_size, self.size * self.depth])
+    self.prepare_model(data_dir, dataset_name, vocab_size)
