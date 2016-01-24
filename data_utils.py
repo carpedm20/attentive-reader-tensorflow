@@ -227,6 +227,7 @@ def prepare_data(data_dir, dataset_name, vocab_size):
 
 def load_vocab(data_dir, dataset_name, vocab_size):
   vocab_fname = os.path.join(data_dir, dataset_name, "%s.vocab%s" % (dataset_name, vocab_size))
+  print(" [*] Loading vocab from %s ..." % vocab_fname)
   return initialize_vocabulary(vocab_fname)
 
 

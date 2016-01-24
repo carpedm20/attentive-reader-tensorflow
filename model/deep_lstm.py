@@ -9,7 +9,7 @@ class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3,
                learning_rate=1e-4, batch_size=32,
-               keep_prob=0.1, max_nsteps=1500,
+               keep_prob=0.1, max_nsteps=200,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
@@ -32,6 +32,7 @@ class DeepLSTM(Model):
     self.max_nsteps = int(max_nsteps)
     self.checkpoint_dir = checkpoint_dir
 
+    print(" [*] Building Deep LSTM...")
     self.cell = LSTMCell(size, forget_bias=0.0)
     if not forward_only and self.keep_prob < 1:
       self.cell = DropoutWrapper(self.cell, output_keep_prob=keep_prob)
@@ -64,6 +65,7 @@ class DeepLSTM(Model):
   def prepare_model(self, data_dir, dataset_name, vocab_size):
     if not self.vocab:
       self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
+      print(" [*] Loading vocab finished.")
 
     self.W = tf.get_variable("W", [vocab_size, self.size * self.depth])
 
@@ -71,12 +73,15 @@ class DeepLSTM(Model):
     self.loss = tf.nn.softmax_cross_entropy_with_logits(
         tf.matmul(self.actual_output, self.W, transpose_b=True), self.target)
 
-  def train(self, sess, epoch=25, batch_size=32,
-            learning_rate=0.0002, momentum=0.9, decay=0.95,
-            data_dir="data", dataset_name="cnn", vocab_size=1000000):
+    print(" [*] Preparing model finished.")
+
+  def train(self, sess, epoch=25, learning_rate=0.0002, momentum=0.9,
+            decay=0.95, data_dir="data", dataset_name="cnn", vocab_size=100000):
     self.prepare_model(data_dir, dataset_name, vocab_size)
 
+    print(" [*] Calculating gradient and loss...")
     self.optim = tf.train.AdamOptimizer(learning_rate, 0.9).minimize(self.loss)
+    print(" [*] Calculating gradient and loss finished.")
     # Could not use RMSPropOptimizer because the sparse update of RMSPropOptimizer
     # is not implemented yet (2016.01.24).
     # self.optim = tf.train.RMSPropOptimizer(learning_rate,
@@ -84,8 +89,9 @@ class DeepLSTM(Model):
     #                                        momentum=momentum).minimize(self.loss)
 
     sess.run(tf.initialize_all_variables())
+
     if self.load(self.checkpoint_dir, dataset_name):
-      print(" [*] Pretrained model is loaded.")
+      print(" [*] Builing Deep LSTM is loaded.")
     else:
       print(" [*] There is no checkpoint for this model.")
 
@@ -99,8 +105,8 @@ class DeepLSTM(Model):
         questions.append(question.split())
         answers.append(answers)
 
-      cost = self.run([loss], feed_dict={})
       import ipdb; ipdb.set_trace() 
+      cost = sess.run([loss], feed_dict={})
 
       #self.model.
 
