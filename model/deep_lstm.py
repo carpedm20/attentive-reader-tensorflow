@@ -11,7 +11,7 @@ from data_utils import load_vocab, load_dataset
 class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3, batch_size=32,
-               keep_prob=0.1, max_nsteps=1000,
+               keep_prob=0.1, max_nsteps=2000,
                #keep_prob=0.1, max_nsteps=10,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
