@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
+from utils import pad_array
 from base_model import Model
 from cells import LSTMCell, MultiRNNCellWithSkipConn, DropoutWrapper
 from data_utils import load_vocab, load_dataset
@@ -107,9 +108,8 @@ class DeepLSTM(Model):
         answers.append(answers)
 
       import ipdb; ipdb.set_trace() 
+      inputs = pad_array(contexts, self.max_nsteps)
       cost = sess.run([loss], feed_dict={})
-
-      #self.model.
 
   def test(self, voab_size):
     self.prepare_model(data_dir, dataset_name, vocab_size)

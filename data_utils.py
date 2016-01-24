@@ -76,7 +76,6 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
       vocab[w] += 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
     if len(vocab_list) > max_vocabulary_size:
-      import ipdb; ipdb.set_trace()
       vocab_list = vocab_list[:max_vocabulary_size]
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
     for key in set(range(max(keys))) - set(keys):
@@ -234,7 +233,7 @@ def load_vocab(data_dir, dataset_name, vocab_size):
 
 def load_dataset(data_dir, dataset_name, vocab_size):
   train_files = os.path.join(data_dir, dataset_name, "questions",
-                             "training", "*.question.ids%s" % (vocab_size))
+                             "training", "*.question.ids%s_*" % (vocab_size))
   for fname in glob(train_files):
     with open(fname) as f:
       yield f.read().split("\n\n")
