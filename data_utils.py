@@ -253,6 +253,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
       vocab_size = sys.argv[3]
     else:
-      vocab_size = 300000
+      vocab_size = 100000
 
     prepare_data(data_dir, dataset_name, vocab_size)

@@ -11,7 +11,7 @@ from data_utils import load_vocab, load_dataset
 class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3, batch_size=32,
-               keep_prob=0.1, max_nsteps=2000,
+               keep_prob=0.1, max_nsteps=1000,
                #keep_prob=0.1, max_nsteps=10,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
@@ -22,7 +22,7 @@ class DeepLSTM(Model):
       learning_rate: float, [1e-3, 5e-4, 1e-4, 5e-5]
       batch_size: int, The size of a batch [16, 32]
       keep_prob: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
-      max_nsteps: int, The max time unit [1500]
+      max_nsteps: int, The max time unit [1000]
     """
     super(DeepLSTM, self).__init__()
 
@@ -106,21 +106,32 @@ class DeepLSTM(Model):
     for epoch_idx in xrange(epoch):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
 
-      counter = 0
       batch_stop = False
       while True:
         targets.fill(0)
         inputs, nstarts, answers = [], [], []
-        for batch_idx in xrange(self.batch_size):
+        batch_idx = 0
+        while True:
           try:
             (_, document, question, answer, _), data_idx, data_max_idx = data_loader.next()
           except StopIteration:
             batch_stop = True
             break
-          inputs.append([int(d) for d in document.split()] + [0] + \
-                        [int(q) for q in question.split()]) # [0] means splitter between d and q
+
+          # [0] means splitter between d and q
+          data = [int(d) for d in document.split()] + [0] + \
+              [int(q) for q in question.split() for q in question.split()]
+
+          if len(data) > self.max_nsteps:
+            continue
+
+          inputs.append(data)
           nstarts.append(len(inputs[-1]))
           targets[batch_idx][int(answer)] = 1
+
+          batch_idx += 1
+          if batch_idx == self.batch_size:
+            break
 
         if batch_stop:
           break
