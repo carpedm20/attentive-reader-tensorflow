@@ -33,7 +33,7 @@ from tensorflow.python.platform import gfile
 
 # Regular expressions used to tokenize.
 _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
-_DIGIT_RE = re.compile(r"\d")
+_DIGIT_RE = re.compile(r"(^| )\d+")
 
 _ENTITY = "@entity"
 _UNK = "_UNK"
@@ -72,10 +72,11 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
     tokens = tokenizer(context) if tokenizer else basic_tokenizer(context)
     for w in tqdm(tokens):
       if 'entity' not in w:
-        w = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
+        w = re.sub(_DIGIT_RE, " 0", w) if normalize_digits else w
       vocab[w] += 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
     if len(vocab_list) > max_vocabulary_size:
+      import ipdb; ipdb.set_trace()
       vocab_list = vocab_list[:max_vocabulary_size]
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
     for key in set(range(max(keys))) - set(keys):
@@ -140,7 +141,7 @@ def sentence_to_token_ids(sentence, vocabulary,
   if not normalize_digits:
     return [vocabulary.get(w, UNK_ID) for w in words]
   # Normalize digits by 0 before looking words up in the vocabulary.
-  return [vocabulary.get(re.sub(_DIGIT_RE, "0", w), UNK_ID) for w in words]
+  return [vocabulary.get(re.sub(_DIGIT_RE, " 0", w), UNK_ID) for w in words]
 
 
 def data_to_token_ids(data_path, target_path, vocab,

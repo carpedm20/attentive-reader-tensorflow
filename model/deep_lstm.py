@@ -82,6 +82,7 @@ class DeepLSTM(Model):
     print(" [*] Calculating gradient and loss...")
     self.optim = tf.train.AdamOptimizer(learning_rate, 0.9).minimize(self.loss)
     print(" [*] Calculating gradient and loss finished.")
+
     # Could not use RMSPropOptimizer because the sparse update of RMSPropOptimizer
     # is not implemented yet (2016.01.24).
     # self.optim = tf.train.RMSPropOptimizer(learning_rate,
@@ -99,10 +100,10 @@ class DeepLSTM(Model):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
 
       contexts, questions, answers = [], [], []
-      for batch_idx in xrange(batch_size):
+      for batch_idx in xrange(self.batch_size):
         _, context, question, answer, _ = data_loader.next()
-        contexts.append(context.split())
-        questions.append(question.split())
+        contexts.append([int(c) for c in context.split()])
+        questions.append([int(q) for q in question.split()])
         answers.append(answers)
 
       import ipdb; ipdb.set_trace() 
