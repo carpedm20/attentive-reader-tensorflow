@@ -9,7 +9,7 @@ class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3,
                learning_rate=1e-4, batch_size=32,
-               keep_prob=0.1, max_nsteps=100,
+               keep_prob=0.1, max_nsteps=1500,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
@@ -19,7 +19,7 @@ class DeepLSTM(Model):
       learning_rate: float, [1e-3, 5e-4, 1e-4, 5e-5]
       batch_size: int, The size of a batch [16, 32]
       keep_prob: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
-      max_nsteps: int, The max time unit [100]
+      max_nsteps: int, The max time unit [1500]
     """
     super(DeepLSTM, self).__init__()
 
@@ -95,8 +95,8 @@ class DeepLSTM(Model):
       contexts, questions, answers = [], [], []
       for batch_idx in xrange(batch_size):
         _, context, question, answer, _ = data_loader.next()
-        contexts.append(context)
-        questions.append(question)
+        contexts.append(context.split())
+        questions.append(question.split())
         answers.append(answers)
 
       cost = self.run([loss], feed_dict={})
