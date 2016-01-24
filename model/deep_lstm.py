@@ -1,7 +1,8 @@
+import time
 import tensorflow as tf
 from tensorflow.models.rnn import rnn, rnn_cell
 
-from utils import pad_array
+from utils import zero_pad
 from base_model import Model
 from cells import LSTMCell, MultiRNNCellWithSkipConn, DropoutWrapper
 from data_utils import load_vocab, load_dataset
@@ -10,6 +11,7 @@ class DeepLSTM(Model):
   """Deep LSTM model."""
   def __init__(self, vocab_size, size=256, depth=3,
                learning_rate=1e-4, batch_size=32,
+               #keep_prob=0.1, max_nsteps=2000,
                keep_prob=0.1, max_nsteps=200,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
@@ -33,6 +35,7 @@ class DeepLSTM(Model):
     self.max_nsteps = int(max_nsteps)
     self.checkpoint_dir = checkpoint_dir
 
+    start = time.clock()
     print(" [*] Building Deep LSTM...")
     self.cell = LSTMCell(size, forget_bias=0.0)
     if not forward_only and self.keep_prob < 1:
@@ -48,8 +51,6 @@ class DeepLSTM(Model):
     self.inputs = tf.placeholder(tf.int32, [batch_size, max_nsteps])
     with tf.device("/cpu:0"):
       embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
-    self.nsteps = tf.placeholder(tf.int32, [3]) # should be [0, nstep, 0]
-    self.actual_batch_size = tf.placeholder(tf.int32, [3]) # should be [actual_batch_size, 1, size]
 
     # output states
     _, states = rnn.rnn(self.stacked_cell,
@@ -57,11 +58,24 @@ class DeepLSTM(Model):
                         dtype=tf.float32,
                         initial_state=self.initial_state)
 
-    self.batch_states = tf.transpose(tf.pack(states), [1, 0, 2])
-    self.output = tf.gather(self.batch_states, self.nsteps)
+    if True:
+      self.batch_states = tf.pack(states)
+      self.nsteps = tf.placeholder(tf.int32, [self.batch_size, 3])
+      outputs = tf.pack([tf.slice(self.batch_states, nstep, [1, 1, self.size * self.depth])
+          for idx, nstep in enumerate(tf.unpack(self.nsteps))])
+      self.outputs = tf.reshape(self.outputs, [self.batch_size, self.size * self.depth])
+      # self.batch_states = tf.transpose(tf.pack(states), [1, 0, 2])
+      # self.outputs = tf.pack([tf.gather(batch_state, nstep) \
+      #     for nstep, batch_state in zip(tf.unpack(self.nsteps), tf.unpack(self.batch_states))])
+    else:
+      self.batch_states = tf.transpose(tf.pack(states), [1, 0, 2])
 
-    actual_output = tf.slice(self.output, self.nsteps, self.actual_batch_size)
-    self.actual_output = tf.reshape(actual_output, [-1, self.size * self.depth])
+      self.nsteps = tf.placeholder(tf.int32, [3]) # should be [0, nstep, 0]
+      self.actual_batch_size = tf.placeholder(tf.int32, [3]) # should be [actual_batch_size, 1, size]
+
+      outputs = tf.gather(self.batch_states, self.nsteps)
+      actual_outputs = tf.slice(outputs, self.nsteps, self.actual_batch_size)
+      self.outputs = tf.reshape(actual_outputs, [-1, self.size * self.depth])
 
   def prepare_model(self, data_dir, dataset_name, vocab_size):
     if not self.vocab:
@@ -72,7 +86,7 @@ class DeepLSTM(Model):
 
     self.target = tf.placeholder(tf.float32, [None, vocab_size])
     self.loss = tf.nn.softmax_cross_entropy_with_logits(
-        tf.matmul(self.actual_output, self.W, transpose_b=True), self.target)
+        tf.matmul(self.outputs, self.W, transpose_b=True), self.target)
 
     print(" [*] Preparing model finished.")
 
@@ -80,9 +94,11 @@ class DeepLSTM(Model):
             decay=0.95, data_dir="data", dataset_name="cnn", vocab_size=100000):
     self.prepare_model(data_dir, dataset_name, vocab_size)
 
+    start = time.clock()
     print(" [*] Calculating gradient and loss...")
+    import ipdb; ipdb.set_trace() 
     self.optim = tf.train.AdamOptimizer(learning_rate, 0.9).minimize(self.loss)
-    print(" [*] Calculating gradient and loss finished.")
+    print(" [*] Calculating gradient and loss finished. Take %.2fs" % (time.clock() - start))
 
     # Could not use RMSPropOptimizer because the sparse update of RMSPropOptimizer
     # is not implemented yet (2016.01.24).
@@ -100,16 +116,15 @@ class DeepLSTM(Model):
     for epoch_idx in xrange(epoch):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
 
-      contexts, questions, answers = [], [], []
+      inputs, answers = [], [], []
       for batch_idx in xrange(self.batch_size):
-        _, context, question, answer, _ = data_loader.next()
-        contexts.append([int(c) for c in context.split()])
-        questions.append([int(q) for q in question.split()])
+        _, document, question, answer, _ = data_loader.next()
+        inputs.append([int(d) for d in document.split()] + [0] + \
+                      [int(q) for q in question.split()]) # [0] means splitter between d and q
         answers.append(answers)
 
-      import ipdb; ipdb.set_trace() 
-      inputs = pad_array(contexts, self.max_nsteps)
-      cost = sess.run([loss], feed_dict={})
+      inputs = zero_pad(inputs, self.max_nsteps, force=True)
+      cost = sess.run([loss], feed_dict={self.inputs: inputs})
 
   def test(self, voab_size):
     self.prepare_model(data_dir, dataset_name, vocab_size)

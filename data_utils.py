@@ -36,9 +36,12 @@ _WORD_SPLIT = re.compile("([.,!?\"':;)(])")
 _DIGIT_RE = re.compile(r"(^| )\d+")
 
 _ENTITY = "@entity"
+_BAR = "_BAR"
 _UNK = "_UNK"
-_START_VOCAB = [_UNK]
-UNK_ID = 0
+BAR_ID = 0
+UNK_ID = 1
+_START_VOCAB = [_BAR, _UNK]
+
 
 def basic_tokenizer(sentence):
   """Very basic tokenizer: split the sentence into a list of tokens."""
@@ -72,7 +75,7 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
     tokens = tokenizer(context) if tokenizer else basic_tokenizer(context)
     for w in tqdm(tokens):
       if 'entity' not in w:
-        w = re.sub(_DIGIT_RE, " 0", w) if normalize_digits else w
+        w = re.sub(_DIGIT_RE, " %s" % UNK_ID, w) if normalize_digits else w
       vocab[w] += 1
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
     if len(vocab_list) > max_vocabulary_size:
@@ -140,7 +143,7 @@ def sentence_to_token_ids(sentence, vocabulary,
   if not normalize_digits:
     return [vocabulary.get(w, UNK_ID) for w in words]
   # Normalize digits by 0 before looking words up in the vocabulary.
-  return [vocabulary.get(re.sub(_DIGIT_RE, " 0", w), UNK_ID) for w in words]
+  return [vocabulary.get(re.sub(_DIGIT_RE, " %s" % UNK_ID, w), UNK_ID) for w in words]
 
 
 def data_to_token_ids(data_path, target_path, vocab,
