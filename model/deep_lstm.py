@@ -10,14 +10,13 @@ from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
-  def __init__(self, vocab_size, size=256, depth=3, batch_size=32,
+  def __init__(self, size=256, depth=3, batch_size=32,
                keep_prob=0.1, max_nsteps=2000,
                #keep_prob=0.1, max_nsteps=10,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
     Args:
-      vocab_size: int, The dimensionality of the input vocab
       size: int, The dimensionality of the inputs into the Deep LSTM cell [32, 64, 256]
       learning_rate: float, [1e-3, 5e-4, 1e-4, 5e-5]
       batch_size: int, The size of a batch [16, 32]
@@ -26,7 +25,6 @@ class DeepLSTM(Model):
     """
     super(DeepLSTM, self).__init__()
 
-    self.vocab_size = int(vocab_size)
     self.size = int(size)
     self.depth = int(depth)
     self.batch_size = int(batch_size)
@@ -44,8 +42,15 @@ class DeepLSTM(Model):
 
     self.initial_state = self.stacked_cell.zero_state(batch_size, tf.float32)
 
+  def prepare_model(self, data_dir, dataset_name, vocab_size):
+    if not self.vocab:
+      self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
+      print(" [*] Loading vocab finished.")
+
+    self.vocab_size = len(self.vocab)
+
     with tf.device("/cpu:0"):
-      self.emb = tf.get_variable("emb", [vocab_size, size])
+      self.emb = tf.get_variable("emb", [self.vocab_size, self.size])
 
     # inputs
     self.inputs = tf.placeholder(tf.int32, [self.batch_size, self.max_nsteps])
@@ -65,14 +70,9 @@ class DeepLSTM(Model):
 
     self.outputs = tf.reshape(outputs, [self.batch_size, self.output_size])
 
-  def prepare_model(self, data_dir, dataset_name, vocab_size):
-    if not self.vocab:
-      self.vocab, self.rev_vocab = load_vocab(data_dir, dataset_name, vocab_size)
-      print(" [*] Loading vocab finished.")
+    self.W = tf.get_variable("W", [self.vocab_size, self.output_size])
 
-    self.W = tf.get_variable("W", [vocab_size, self.output_size])
-
-    self.targets = tf.placeholder(tf.float32, [self.batch_size, vocab_size])
+    self.targets = tf.placeholder(tf.float32, [self.batch_size, self.vocab_size])
     self.loss = tf.nn.softmax_cross_entropy_with_logits(
         tf.matmul(self.outputs, self.W, transpose_b=True), self.targets)
 

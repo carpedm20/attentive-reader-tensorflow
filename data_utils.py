@@ -28,6 +28,10 @@ import tarfile
 from tqdm import *
 from glob import glob
 from collections import defaultdict
+from nltk.corpus import stopwords
+from nltk.tokenize import RegexpTokenizer
+
+tokenizer = RegexpTokenizer(r'\w+')
 
 from tensorflow.python.platform import gfile
 
@@ -42,13 +46,14 @@ BAR_ID = 0
 UNK_ID = 1
 _START_VOCAB = [_BAR, _UNK]
 
+tokenizer = RegexpTokenizer(r'@?\w+')
+cachedStopWords = stopwords.words("english")
+
 
 def basic_tokenizer(sentence):
   """Very basic tokenizer: split the sentence into a list of tokens."""
-  words = []
-  for space_separated_fragment in sentence.strip().split():
-    words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
-  return [w for w in words if w]
+  words = tokenizer.tokenize(sentence)
+  return [w for w in words if w not in stopwords.words("english")]
 
 
 def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
@@ -83,6 +88,7 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
     keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
     for key in set(range(max(keys))) - set(keys):
       vocab['%s%s' % (_ENTITY, key)] += 1
+    import ipdb; ipdb.set_trace() 
     with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
       for w in vocab_list:
         vocab_file.write(w + "\n")
@@ -163,7 +169,8 @@ def data_to_token_ids(data_path, target_path, vocab,
       if None, basic_tokenizer will be used.
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
-  if not gfile.Exists(target_path):
+  #if not gfile.Exists(target_path):
+  if True:
     with gfile.GFile(data_path, mode="r") as data_file:
       counter = 0
       results = []
@@ -172,7 +179,10 @@ def data_to_token_ids(data_path, target_path, vocab,
           results.append(line)
         elif counter == 4:
           entity, ans = line.split(":", 1)
-          results.append("%s:%s" % (vocab[entity], ans))
+          try:
+            results.append("%s:%s" % (vocab[entity[:]], ans))
+          except:
+            continue
         else:
           token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                             normalize_digits)
