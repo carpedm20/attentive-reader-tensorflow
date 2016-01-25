@@ -2,8 +2,6 @@ import os
 from glob import glob
 import tensorflow as tf
 
-from data_utils import initialize_vocabulary
-
 class Model(object):
   """Abstract object representing an Reader model."""
   def __init__(self):

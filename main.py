@@ -2,9 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from model.deep_lstm import DeepLSTM
-from model.deep_bi_lstm import DeepBiLSTM
-from model.attentive import AttentiveReader
+from model import DeepLSTM, DeepBiLSTM, AttentiveReader
 
 from utils import pp
 
