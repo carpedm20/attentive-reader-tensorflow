@@ -10,7 +10,7 @@ from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
-  def __init__(self, size=128, depth=3, batch_size=16,
+  def __init__(self, size=256, depth=3, batch_size=32,
                keep_prob=0.1, max_nsteps=700,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
@@ -48,13 +48,11 @@ class DeepLSTM(Model):
 
     self.vocab_size = len(self.vocab)
 
-    with tf.device("/cpu:0"):
-      self.emb = tf.get_variable("emb", [self.vocab_size, self.size])
+    self.emb = tf.get_variable("emb", [self.vocab_size, self.size])
 
     # inputs
     self.inputs = tf.placeholder(tf.int32, [self.batch_size, self.max_nsteps])
-    with tf.device("/cpu:0"):
-      embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
+    embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
 
     tf.histogram_summary("embed", self.emb)
 

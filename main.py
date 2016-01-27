@@ -34,7 +34,7 @@ def main(_):
     print(" [*] Creating checkpoint directory...")
     os.makedirs(FLAGS.checkpoint_dir)
 
-  with tf.Session() as sess:
+  with tf.device('/cpu:0'), tf.Session() as sess:
     model = model_dict[FLAGS.model](batch_size=FLAGS.batch_size, 
         checkpoint_dir=FLAGS.checkpoint_dir, forward_only=FLAGS.forward_only)
 
