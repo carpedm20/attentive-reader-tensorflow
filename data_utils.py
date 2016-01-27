@@ -24,10 +24,12 @@ import os
 import re
 import sys
 import gzip
+import time
 import tarfile
 from tqdm import *
 from glob import glob
 from collections import defaultdict
+from gensim import corpora
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
 
@@ -75,23 +77,12 @@ def create_vocabulary(vocabulary_path, context, max_vocabulary_size,
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not gfile.Exists(vocabulary_path):
+    t0 = time.time()
     print("Creating vocabulary %s" % (vocabulary_path))
-    vocab = defaultdict(int)
-    tokens = tokenizer(context) if tokenizer else basic_tokenizer(context)
-    for w in tqdm(tokens):
-      if 'entity' not in w:
-        w = re.sub(_DIGIT_RE, " ", w) if normalize_digits else w
-      vocab[w] += 1
-    vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-    if len(vocab_list) > max_vocabulary_size:
-      vocab_list = vocab_list[:max_vocabulary_size]
-    keys = [int(key[len(_ENTITY):]) for key in vocab.keys() if _ENTITY in key]
-    for key in set(range(max(keys))) - set(keys):
-      vocab['%s%s' % (_ENTITY, key)] += 1
-    import ipdb; ipdb.set_trace() 
-    with gfile.GFile(vocabulary_path, mode="w") as vocab_file:
-      for w in vocab_list:
-        vocab_file.write(w + "\n")
+    texts = [word for word in context.lower().split() if word not in cachedStopWords]
+    dictionary = corpora.Dictionary([texts], prune_at=max_vocabulary_size)
+    print("Tokenize : %.4fs" % (t0 - time.time()))
+    dictionary.save(vocabulary_path)
 
 
 def initialize_vocabulary(vocabulary_path):
@@ -114,12 +105,8 @@ def initialize_vocabulary(vocabulary_path):
     ValueError: if the provided vocabulary_path does not exist.
   """
   if gfile.Exists(vocabulary_path):
-    rev_vocab = []
-    with gfile.GFile(vocabulary_path, mode="r") as f:
-      rev_vocab.extend(f.readlines())
-    rev_vocab = [line.strip() for line in rev_vocab]
-    vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
-    return vocab, rev_vocab
+    vocab = corpora.Dictionary.load(vocabulary_path)
+    return vocab.token2id, vocab.token2id.keys()
   else:
     raise ValueError("Vocabulary file %s not found.", vocabulary_path)
 
@@ -190,7 +177,10 @@ def data_to_token_ids(data_path, target_path, vocab,
         if line == "\n":
           counter += 1
 
-      len_d, len_q = len(results[2].split()), len(results[4].split())
+      try:
+        len_d, len_q = len(results[2].split()), len(results[4].split())
+      except:
+        return
       with gfile.GFile("%s_%s" % (target_path, len_d + len_q), mode="w") as tokens_file:
         tokens_file.writelines(results)
 
@@ -265,4 +255,4 @@ if __name__ == '__main__':
     else:
       vocab_size = 100000
 
-    prepare_data(data_dir, dataset_name, vocab_size)
+    prepare_data(data_dir, dataset_name, int(vocab_size))

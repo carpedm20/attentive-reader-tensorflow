@@ -10,9 +10,8 @@ from data_utils import load_vocab, load_dataset
 
 class DeepLSTM(Model):
   """Deep LSTM model."""
-  def __init__(self, size=256, depth=3, batch_size=32,
-               keep_prob=0.1, max_nsteps=2000,
-               #keep_prob=0.1, max_nsteps=10,
+  def __init__(self, size=128, depth=3, batch_size=16,
+               keep_prob=0.1, max_nsteps=700,
                checkpoint_dir="checkpoint", forward_only=False):
     """Initialize the parameters for an Deep LSTM model.
     
@@ -57,6 +56,8 @@ class DeepLSTM(Model):
     with tf.device("/cpu:0"):
       embed_inputs = tf.nn.embedding_lookup(self.emb, tf.transpose(self.inputs))
 
+    tf.histogram_summary("embed", self.emb)
+
     # output states
     _, states = rnn.rnn(self.stacked_cell,
                         tf.unpack(embed_inputs),
@@ -71,10 +72,13 @@ class DeepLSTM(Model):
     self.outputs = tf.reshape(outputs, [self.batch_size, self.output_size])
 
     self.W = tf.get_variable("W", [self.vocab_size, self.output_size])
+    tf.histogram_summary("weights", self.W)
+    tf.histogram_summary("output", outputs)
 
     self.targets = tf.placeholder(tf.float32, [self.batch_size, self.vocab_size])
     self.loss = tf.nn.softmax_cross_entropy_with_logits(
         tf.matmul(self.outputs, self.W, transpose_b=True), self.targets)
+    tf.scalar_summary("loss", tf.reduce_mean(self.loss))
 
     print(" [*] Preparing model finished.")
 
@@ -95,13 +99,17 @@ class DeepLSTM(Model):
 
     sess.run(tf.initialize_all_variables())
 
-    if self.load(self.checkpoint_dir, dataset_name):
-      print(" [*] Builing Deep LSTM is loaded.")
+    if self.load(sess, self.checkpoint_dir, dataset_name):
+      print(" [*] Deep LSTM checkpoint is loaded.")
     else:
       print(" [*] There is no checkpoint for this model.")
 
     targets = np.zeros([self.batch_size, self.vocab_size])
 
+    merged = tf.merge_all_summaries()
+    writer = tf.train.SummaryWriter("/tmp/deep_lstm", sess.graph_def)
+
+    counter = 0
     start_time = time.time()
     for epoch_idx in xrange(epoch):
       data_loader = load_dataset(data_dir, dataset_name, vocab_size)
@@ -126,15 +134,12 @@ class DeepLSTM(Model):
             continue
 
           inputs.append(data)
-          nstarts.append(len(inputs[-1]))
+          nstarts.append(len(inputs[-1]) - 1)
           targets[batch_idx][int(answer)] = 1
 
           batch_idx += 1
-          if batch_idx == self.batch_size:
-            break
-
-        if batch_stop:
-          break
+          if batch_idx == self.batch_size: break
+        if batch_stop: break
 
         FORCE=False
         if FORCE:
@@ -145,15 +150,16 @@ class DeepLSTM(Model):
           inputs = array_pad(inputs, self.max_nsteps, pad=0)
         nstarts = [[nstart, idx, 0] for idx, nstart in enumerate(nstarts)]
 
-        cost = sess.run([self.loss], feed_dict={self.inputs: inputs,
-                                                self.nstarts: nstarts,
-                                                self.targets: targets})
-
+        _, summary_str, cost = sess.run([self.optim, merged, self.loss], 
+                                        feed_dict={self.inputs: inputs,
+                                                   self.nstarts: nstarts,
+                                                   self.targets: targets})
         if counter % 10 == 0:
+          writer.add_summary(summary_str, counter)
           print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f" \
               % (epoch_idx, data_idx, data_max_idx, time.time() - start_time, np.mean(cost)))
         counter += 1
-      self.save(self.checkpoint_dir, dataset_name)
+      self.save(sess, self.checkpoint_dir, dataset_name)
 
   def test(self, voab_size):
     self.prepare_model(data_dir, dataset_name, vocab_size)
