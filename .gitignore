@@ -1,5 +1,8 @@
+logs
+
 # data
 data
+checkpoint
 *.tgz
 
 # Created by https://www.gitignore.io/api/python,vim

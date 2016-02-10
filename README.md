@@ -8,9 +8,9 @@ Tensorflow implementation of Google DeepMind's [Teaching Machines to Read and Co
 1. Deep LSTM Reader
     - with [skip connections](http://arxiv.org/pdf/1308.0850.pdf) from the inputs to all hidden layers
     - with [peephole weights](http://www.jmlr.org/papers/volume3/gers02a/gers02a.pdf) that provide precise timing
-2. Attentive Reader
+2. Attentive Reader (in progress)
     - with [Bidirectional LSTMs](http://www.cs.toronto.edu/~graves/nn_2005.pdf) with peephole weights
-3. Impatient Reader
+3. Impatient Reader (in progress)
     - with [Bidirectional LSTMs](http://www.cs.toronto.edu/~graves/nn_2005.pdf) with peephole weights
     - with recurrent accumulation of information from the document while reading the query
 
@@ -37,11 +37,11 @@ Then run the pre-processing code with:
 
 To train a model with `cnn` dataset:
 
-    $ python main.py --dataset cnn --is_train True
+    $ python main.py --dataset cnn
 
 To test an existing model:
 
-    $ python main.py --dataset cnn
+    $ python main.py --dataset cnn --forward_only True
 
 (in progress)
 
