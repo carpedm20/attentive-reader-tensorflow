@@ -43,7 +43,7 @@ def main(_):
                   FLAGS.learning_rate, FLAGS.momentum, FLAGS.decay,
                   FLAGS.data_dir, FLAGS.dataset)
     else:
-      model.load(FLAGS.checkpoint_dir)
+      model.load(sess, FLAGS.checkpoint_dir, FLAGS.dataset)
 
 if __name__ == '__main__':
   tf.app.run()
